@@ -7,6 +7,16 @@ int QTIMiddle = 51;
 int QTILeft = 49;
 int QTIRight = 53;
 
+/*
+  -1 : none
+  0 : hash
+  1 : on left of line
+  2 : on right of line
+  3 : off line
+  4 : on line
+*/
+int lastSense = -1;
+
 void setup() {
   tone(4, 3000, 3000);
   delay(1000);
@@ -33,30 +43,77 @@ void loop() {
   Serial.println(right);
   int time = 1;
   
-  if(middle && left && right) {
-    stopMoving(1000);
-    goForward(25);
-    // goLeft(250);
-    return;
-  }
+  // if(middle && left && right) {
+  //   // on hash
+  //   if(lastSense == 0){
+  //     goForward(25);
+  //     return;
+  //   }
+  //   lastSense = 0;
+  //   stopMoving(1000);
+  //   goForward(50);
+  //   // goLeft(250);
+  //   return;
+  // }
 
   // if(!middle && !left && !right) {
-  //   goLeft(250);
+  //   // off line
+  //   // lastSense = 3;
+  //   switch(lastSense){
+  //     case 0: // on hash
+  //       goBackwardRight(time);
+  //       break;
+  //     case 1: //on left
+  //       goLeft(time);
+  //       break;
+  //     case 2: //on right
+  //       goRight(time);
+  //       break;
+  //     case 3:  // off line
+  //       goBackward(time);
+  //       break;
+  //     case 4: // on line
+  //       goForwardLeft(time);
+  //       break;
+  //     default:
+  //       stopMoving(time);
+  //       break;
+  //   }
+  //   // goLeft(time);
   //   return;
   // }
 
   if(middle && !left && !right){
+    //on line
+    lastSense = 4;
     goForward(time);
     return;
   }
 
   if(!left && right){
+    //on left of line
+    lastSense = 1;
     goRight(time);
     return;
   }
 
   if(left && !right){
+    // on right of line
+    lastSense = 2;
     goLeft(time);
+    return;
+  }
+
+  if((middle && left && right) || lastSense == 0) {
+    // on hash
+    if(lastSense == 0){
+      goForwardLeft(25);
+      return;
+    }
+    lastSense = 0;
+    stopMoving(1000);
+    goForwardLeft(50);
+    // goLeft(250);
     return;
   }
 
@@ -64,6 +121,7 @@ void loop() {
 }
 
 void goForward(int time){
+  // lastMove = 0;
   servoLeft.writeMicroseconds(1700);
   servoRight.writeMicroseconds(1300);
   delay(time);
@@ -75,13 +133,22 @@ void goBackward(int time){
   delay(time);
 }
 
+void goBackwardRight(int time){
+  servoLeft.writeMicroseconds(1300);
+  servoRight.writeMicroseconds(1600);
+  delay(time);
+}
+
+
 void stopMoving(int time){
+  // lastMove = 4;
   servoLeft.writeMicroseconds(1500);
   servoRight.writeMicroseconds(1500);
   delay(time);
 }
 
 void goLeft(int time){
+  // lastMove = 1;
   servoLeft.writeMicroseconds(1475);
   servoRight.writeMicroseconds(1475);
   delay(time);
@@ -94,6 +161,7 @@ void goForwardLeft(int time){
 }
 
 void goRight(int time){
+  // lastMove = 2;
   servoLeft.writeMicroseconds(1525);
   servoRight.writeMicroseconds(1525);
   delay(time);
