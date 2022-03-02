@@ -31,16 +31,31 @@ void setup() {
 void loop() {
   // true = on black line ~200 ish
   // false = not on black line ~30 ish
-  bool middle = RCTime(QTIMiddle) > 100;
-  bool left = RCTime(QTILeft) > 100;
-  bool right = RCTime(QTIRight) > 100;
+  int threshold = 80;
+  long middleVal = RCTime(QTIMiddle);
+  bool middle = RCTime(QTIMiddle) > threshold;
+  long leftVal = RCTime(QTILeft);
+  bool left = RCTime(QTILeft) > threshold;
+  long rightVal = RCTime(QTIRight);
+  bool right = RCTime(QTIRight) > threshold;
 
-  Serial.print("Middle: ");
-  Serial.println(middle);
-  Serial.print("left: ");
-  Serial.println(left);
-  Serial.print("right: ");
-  Serial.println(right);
+  // Serial.print("Middle: ");
+  // Serial.println(middle);
+  // Serial.print("left: ");
+  // Serial.println(left);
+  // Serial.print("right: ");
+  // Serial.println(right);
+
+
+  // Serial.print(" middle : ");
+  // Serial.println(middleVal);
+  // delay(100);
+  // Serial.print(" left :  ");
+  // Serial.println(leftVal);
+  // delay(100);
+  // Serial.print(" right :  ");
+  // Serial.println(rightVal);
+  // delay(500);
   int time = 1;
   
   if(middle && left && right) {
@@ -106,18 +121,18 @@ void loop() {
     return;
   }
 
-  if((middle && left && right || lastSense == 0) ) {
-    // on hash
-    if(lastSense == 0){
-      goForwardLeft(25);
-      return;
-    }
-    lastSense = 0;
-    stopMoving(1000);
-    // goForward(50);
-    goLeft(250);
-    return;
-  }
+  // if((middle && left && right || lastSense == 0) ) {
+  //   // on hash
+  //   if(lastSense == 0){
+  //     goForwardLeft(25);
+  //     return;
+  //   }
+  //   lastSense = 0;
+  //   stopMoving(1000);
+  //   // goForward(50);
+  //   goLeft(250);
+  //   return;
+  // }
 
   // if(!middle && !left && !right) {
   //   goBackward(50);

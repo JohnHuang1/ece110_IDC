@@ -16,13 +16,13 @@ const int QTIMiddle = 51;
 const int QTILeft = 49;
 const int QTIRight = 53;
 
-const int COM_LED_PIN = 7;
+const int COM_LED_PIN = 8;
 const int COM_BUTTON_PIN = 2;
 
-const int threshold = 5;
-const int noMag = 323;
+const int threshold = 20;
+const int noMag = 522;
 const int HALL_ANALOG_PIN = A2;
-const int HALL_LED_PIN = 5;
+const int HALL_LED_PIN = 10;
 
 /*
   -1 : none
@@ -54,9 +54,10 @@ void loop() {
   // true = on black line ~200 ish
   // false = not on black line ~30 ish
   // *** TODO *** create calibration technique
-  bool middle = RCTime(QTIMiddle) > 100;
-  bool left = RCTime(QTILeft) > 100;
-  bool right = RCTime(QTIRight) > 100;
+  int threshold = 80;
+  bool middle = RCTime(QTIMiddle) > threshold;
+  bool left = RCTime(QTILeft) > threshold;
+  bool right = RCTime(QTIRight) > threshold;
 
   // Communication button press
   bool buttonPressed = digitalRead(COM_BUTTON_PIN);
@@ -78,28 +79,30 @@ void loop() {
     if(buttonPressed){
       outgoing = 'f';
     }
-    Serial.print("Sending: ");
-    Serial.println(outgoing);
+    // Serial.print("Sending: ");
+    // Serial.println(outgoing);
     Serial2.print(outgoing);
+    delay(200);
   }
 
   //Check if there is an incoming message
   if(Serial2.available()){
     char incoming = Serial2.read();
-    Serial.print("Receiving: ");
-    Serial.println(incoming);
+    // Serial.print("Receiving: ");
+    // Serial.println(incoming);
     digitalWrite(COM_LED_PIN, HIGH);
+    delay(500);
   } else {
-    delay(200);
     digitalWrite(COM_LED_PIN, LOW);
   }
 
   // Hall-effect sensor led indicator 
-  // Serial.println(val); // Log sensor values
+  Serial.println(val); // Log sensor values
   if(val < noMag - threshold || val > noMag + threshold){
-    digitalWrite(5, HIGH);
+    digitalWrite(HALL_LED_PIN, HIGH);
+    delay(100);
   } else {
-    digitalWrite(5, LOW);
+    digitalWrite(HALL_LED_PIN, LOW);
   }
 
   int time = 1;
@@ -138,18 +141,18 @@ void loop() {
     return;
   }
 
-  if((middle && left && right || lastSense == 0) ) {
-    // on hash
-    if(lastSense == 0){
-      goForwardLeft(25);
-      return;
-    }
-    lastSense = 0;
-    stopMoving(1000);
-    // goForward(50);
-    goLeft(250);
-    return;
-  }
+  // if((middle && left && right || lastSense == 0) ) {
+  //   // on hash
+  //   if(lastSense == 0){
+  //     goForwardLeft(25);
+  //     return;
+  //   }
+  //   lastSense = 0;
+  //   stopMoving(1000);
+  //   // goForward(50);
+  //   goLeft(250);
+  //   return;
+  // }
 
   // off line
   // if(!middle && !left && !right) {
@@ -168,8 +171,8 @@ void goForward(int time){
 }
 
 void goBackward(int time){
-  servoLeft.writeMicroseconds(1300);
-  servoRight.writeMicroseconds(1700);
+  servoLeft.writeMicroseconds(1450);
+  servoRight.writeMicroseconds(1550);
   delay(time);
 }
 

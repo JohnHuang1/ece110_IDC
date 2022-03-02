@@ -1,7 +1,7 @@
 #define Rx 17
 #define Tx 16
 
-const int LED_PIN = 7;
+const int LED_PIN = 8;
 const int BUTTON_PIN = 2;
 
 void setup() {
