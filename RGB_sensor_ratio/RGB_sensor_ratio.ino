@@ -55,6 +55,19 @@ void loop() {
   blue = (int) b;
   ct = (int) c;
 
+  delay(100);
+  Serial.print("R: "); Serial.print(red, DEC); Serial.print(" ");
+  Serial.print("G: "); Serial.print(green, DEC); Serial.print(" ");
+  Serial.print("B: "); Serial.print(blue, DEC); Serial.print(" ");
+  Serial.print("C: "); Serial.print((int) c, DEC); Serial.print(" ");
+  Serial.println(" ");
+//
+//  if(red > 2000 || green > 2000 || blue > 2000){
+//    Serial.println("OTHER detected");
+//    RGB_color(0, 0, 0);
+//    return;
+//  }
+
   int rgbArr[3] = {red, green, blue};
   int greatestIndex = getGreatest(rgbArr);
   float ratios[3] = {};
@@ -144,6 +157,7 @@ void getRatios(int input[3], int greatestIndex, float ratioArr[3]){
 boolean compareRatios(float data[3], float target[3]){
   float threshold = 0.2;
   for(int i = 0; i < 3; i++){
+//    if(data[i] == 1.0 && data[i] != target[i]) return false;
     if(!(data[i] > target[i] - threshold && data[i] < target[i] + threshold)) return false;
   }
   return true;
