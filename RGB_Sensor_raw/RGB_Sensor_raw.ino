@@ -17,6 +17,7 @@
   int red = 0;
   int blue = 0;
   int green = 0;
+  int ct = 0;
 
   bool ledOn = false;
 
@@ -52,6 +53,7 @@ void loop() {
   red = (int) r;
   green = (int) g;
   blue = (int) b;
+  ct = (int) c;
   
   // colorTemp = tcs.calculateColorTemperature_dn40(r, g, b, c);
   // lux = tcs.calculateLux(r, g, b);
@@ -60,6 +62,7 @@ void loop() {
   Serial.print("R: "); Serial.print(red, DEC); Serial.print(" ");
   Serial.print("G: "); Serial.print(green, DEC); Serial.print(" ");
   Serial.print("B: "); Serial.print(blue, DEC); Serial.print(" ");
+  Serial.print("C: "); Serial.print((int) c, DEC); Serial.print(" ");
   Serial.println(" ");
 
 //  RGB_color(red, green, blue);
@@ -74,9 +77,10 @@ void loop() {
 
   //GREEN
   // r=74 g=109 b = 45
-  if(valInRange(red, 74) && 
-  valInRange(green, 109) &&
-  valInRange(blue, 45))
+  // r=820 g=1160 b=490 c=2760
+  if(valInRange(red, 820) && 
+  valInRange(green, 1160) &&
+  valInRange(blue, 490))
   {
     Serial.println("GREEN detected");
     RGB_color(0, 255, 0);
@@ -85,21 +89,22 @@ void loop() {
 
   //GRAY
   // r=81 g=84 b=67
-  if(valInRange(red, 81) && 
-  valInRange(green, 84) &&
-  valInRange(blue, 67))
+  // r=1300 g=1300 b=1000 c=3210
+  if(valInRange(red, 1300) && 
+  valInRange(green, 1300) &&
+  valInRange(blue, 1000))
   {
     Serial.println("GRAY detected");
-    tcs.setInterrupt(true);
     RGB_color(125, 125, 125);
     return;
   }
 
   //YELLOW
   // r=99 g=95 b=33
-  if(valInRange(red, 99) && 
-  valInRange(green, 95) &&
-  valInRange(blue, 33))
+  // r=2100 g=1860 b=670 c=5180
+  if(valInRange(red, 2100) && 
+  valInRange(green, 1860) && 
+  valInRange(blue, 670))
   {
     Serial.println("YELLOW detected");
     RGB_color(255, 255, 0);
@@ -107,9 +112,10 @@ void loop() {
   }
   //MAGENTA
   // r=105 g=57 b=76
-  if(valInRange(red, 105) && 
-  valInRange(green, 57) &&
-  valInRange(blue, 76))
+  // r=900 g=460 b=570 c=2060
+  if(valInRange(red, 900) && 
+  valInRange(green, 460) &&
+  valInRange(blue, 570))
   {
     Serial.println("MAGENTA detected");
     RGB_color(255, 0, 255);
@@ -118,9 +124,10 @@ void loop() {
 
   //RED
   // r=168 g=42 b=35
-  if(valInRange(red, 168) && 
-  valInRange(green, 42) &&
-  valInRange(blue, 35))
+  // r=1250 g=260 b=230 c=1660
+  if(valInRange(red, 1250) && 
+  valInRange(green, 300) &&
+  valInRange(blue, 300))
   {
     Serial.println("RED detected");
     RGB_color(255, 0, 0);
@@ -129,9 +136,10 @@ void loop() {
   
   //BLUE
   // r=58 g=74 b=103
-  if(valInRange(red, 58) && 
-  valInRange(green, 74) &&
-  valInRange(blue, 103))
+  // r=370 g=450 b=600 c=1530
+  if(valInRange(red, 370) && 
+  valInRange(green, 450) &&
+  valInRange(blue, 600))
   {
     Serial.println("BLUE detected");
     RGB_color(0, 0, 255);
@@ -140,13 +148,12 @@ void loop() {
 
   //OTHER
   RGB_color(0, 0, 0);
-  tcs.setInterrupt(false);
   
 }
 
 bool valInRange(int color, int target){
-  int threshold = 5;
-  return color < target + 5 && color > target - 5;
+  int threshold = 200;
+  return color < target + threshold && color > target - threshold;
 }
 
 void RGB_color(int red_light, int green_light, int blue_light) {
