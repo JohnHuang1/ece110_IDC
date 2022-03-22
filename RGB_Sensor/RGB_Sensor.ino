@@ -46,8 +46,8 @@ void loop() {
   uint16_t r, g, b, c, colorTemp, lux;
 
 
-  tcs.getRawData(&r, &g, &b, &c);
-//  tcs.getRGB(&r, &g, &b);
+//  tcs.getRawData(&r, &g, &b, &c);
+  tcs.getRGB(&r, &g, &b);
 
   red = (int) r;
   green = (int) g;
