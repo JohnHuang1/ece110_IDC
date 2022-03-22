@@ -146,7 +146,7 @@ void loop() {
 
 bool valInRange(int color, int target){
   int threshold = 5;
-  return color < target + 5 && color > target - 5;
+  return color < target + threshold && color > target - threshold;
 }
 
 void RGB_color(int red_light, int green_light, int blue_light) {
