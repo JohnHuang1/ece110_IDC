@@ -6,12 +6,8 @@
 #define Rx 17
 #define Tx 16
 
-const int LED_PIN = 8;
-const int BUTTON_PIN = 2;
-
 int threshold = 20;
 int noMag = 522;
-const int HALL_OUTPUT_PIN = 10;
 
 Servo servoLeft; // higher number = counter clockwise
 Servo servoRight; // lower number = clockwise
@@ -41,17 +37,25 @@ int lastSense = -1;
   int red = 0;
   int blue = 0;
   int green = 0;
-  int ct = 0;
 
   bool finishedLineFollow = false;
 
   int values[6] = {-1,-1,-1,-1,-1,-1};
   int valuesStored = 0;
-
+  String challenges[] = {"Manage the Nitrogen Cycle", 
+                        "Advance Health Informatics", 
+                        "Engineer Better Medicine",
+                        "Enhance Virtual Reality",
+                        "Engineer the Tools of Scientific Discovery",
+                        "Reverse-Engineer the Brain",
+                        "Advance Personalized Learning"};
+ String continentString = "";
+ int magSenseTries = 0;
+ bool magSensed = false;
 
 void setup() {
-  tone(4, 3000, 3000);
-  delay(1000);
+//  tone(4, 3000, 3000);
+//  delay(1000);
 
   Serial.begin(9600);
   Serial2.begin(9600);
@@ -59,14 +63,11 @@ void setup() {
   servoLeft.attach(12);
   servoRight.attach(11);
 
-  pinMode(LED_PIN, OUTPUT);
-
   pinMode(red_light_pin, OUTPUT);
   pinMode(green_light_pin, OUTPUT);
   pinMode(blue_light_pin, OUTPUT);
 
   pinMode(A2, INPUT);
-  pinMode(HALL_OUTPUT_PIN, OUTPUT);
 
   delay(500);
   while(1){
@@ -93,21 +94,29 @@ void loop() {
 
 //  doRGBStuff();
   checkReceive();
-//  if(doMagnetSense()){
-//    sendMessage();
-//  }
+  int maxTries = 100;
+  char msg = 'e';
+  if(magSenseTries < maxTries){
+    if(doMagnetSense()){
+//  'e' = no mag | 'f' = mag
+       msg = 'f';
+       magSensed = true;
+       magSenseTries = maxTries;
+    }
+    magSenseTries++;
+  } else {
+    sendMessage(msg);
+    storeValue(msg);
+  }
+
 //  if(valuesStored == 6) {
-//    Serial.print("sum = ");
-//     Serial.println(getSum());
+//    Serial.println(challenges[getSum()]);
 //  }
-//  Serial.print("sum = ");
-//     Serial.println(getSum());
   delay(100);
   
 }
 
 void goForward(int time){
-  // lastMove = 0;
   servoLeft.writeMicroseconds(1550);
   servoRight.writeMicroseconds(1450);
   delay(time);
@@ -116,12 +125,6 @@ void goForward(int time){
 void goBackward(int time){
   servoLeft.writeMicroseconds(1300);
   servoRight.writeMicroseconds(1700);
-  delay(time);
-}
-
-void goBackwardRight(int time){
-  servoLeft.writeMicroseconds(1300);
-  servoRight.writeMicroseconds(1600);
   delay(time);
 }
 
@@ -136,12 +139,6 @@ void stopMoving(int time){
 void goLeft(int time){
   // lastMove = 1;
   servoLeft.writeMicroseconds(1475);
-  servoRight.writeMicroseconds(1475);
-  delay(time);
-}
-
-void goForwardLeft(int time){
-  servoLeft.writeMicroseconds(1510);
   servoRight.writeMicroseconds(1475);
   delay(time);
 }
@@ -166,11 +163,10 @@ long RCTime(int sensorIn){
    return duration;
 }
 
-void sendMessage(){
-  char outgoing = '4';
+void sendMessage(char c){
   Serial.print("Sending: ");
-  Serial.println(outgoing);
-  Serial2.print(outgoing);
+  Serial.println(c);
+  Serial2.print(c);
 }
 
 bool checkReceive(){
@@ -218,11 +214,9 @@ bool doMagnetSense(){
   int val = analogRead(A2);
 //  Serial.println(val);
   if(val < noMag - threshold || val > noMag + threshold){
-    digitalWrite(HALL_OUTPUT_PIN, HIGH);
     Serial.println("Magnet Detected");
     return true;
   } else {
-    digitalWrite(HALL_OUTPUT_PIN, LOW);
     Serial.println("Magnet NOT Detected");
     return false;
   }
@@ -240,47 +234,32 @@ bool followLine(){
   long rightVal = RCTime(QTIRight);
   bool right = RCTime(QTIRight) > threshold;
 
-  Serial.print(" middle : ");
-  Serial.println(middleVal);
-  Serial.print(" left :  ");
-  Serial.println(leftVal);
-  Serial.print(" right :  ");
-  Serial.println(rightVal);
+//  Serial.print(" middle : ");
+//  Serial.println(middleVal);
+//  Serial.print(" left :  ");
+//  Serial.println(leftVal);
+//  Serial.print(" right :  ");
+//  Serial.println(rightVal);
   // delay(500);
   int time = 1;
   
   if(middle && left && right) {
-    // on hash
-//    if(lastSense == 0){
-//      goForward(25);
-//      return;
-//    }
-//    lastSense = 0;
     stopMoving(1000);
-    // goForward(50);
-//    goLeft(50);
-    
     return true;
   }
 
 
   if(middle && !left && !right){
-    //on line
-    lastSense = 4;
     goForward(time);
     return false;
   }
 
   if(!left && right){
-    //on left of line
-    lastSense = 1;
     goRight(time);
     return false;
   }
 
   if(left && !right){
-    // on right of line
-    lastSense = 2;
     goLeft(time);
     return false;
   }
@@ -289,7 +268,7 @@ bool followLine(){
 }
 
 void doRGBStuff(){
-  uint16_t r, g, b, c, colorTemp, lux;
+  uint16_t r, g, b, c;
   tcs.getRawData(&r, &g, &b, &c);
 
   red = (int) r;
