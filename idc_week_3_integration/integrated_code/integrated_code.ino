@@ -45,6 +45,10 @@ int lastSense = -1;
 
   bool finishedLineFollow = false;
 
+  int values[6] = {-1,-1,-1,-1,-1,-1};
+  int valuesStored = 0;
+
+
 void setup() {
   tone(4, 3000, 3000);
   delay(1000);
@@ -79,19 +83,26 @@ void setup() {
 
 void loop() {
 
-  if(!finishedLineFollow){
-    while(!followLine()){
-      delay(1);
-    }
-    finishedLineFollow = true;
-  }
+//  if(!finishedLineFollow){
+//    RGB_color(0,0,0);
+//    while(!followLine()){
+//      delay(1);
+//    }
+//    finishedLineFollow = true;
+//  }
 
-  doRGBStuff();
+//  doRGBStuff();
   checkReceive();
-  if(doMagnetSense()){
-    sendMessage();
-  }
-  delay(10);
+//  if(doMagnetSense()){
+//    sendMessage();
+//  }
+//  if(valuesStored == 6) {
+//    Serial.print("sum = ");
+//     Serial.println(getSum());
+//  }
+//  Serial.print("sum = ");
+//     Serial.println(getSum());
+  delay(100);
   
 }
 
@@ -164,15 +175,43 @@ void sendMessage(){
 
 bool checkReceive(){
   if(Serial2.available()){
-    char incoming = Serial2.read();
+    char c = Serial2.read();
     Serial.print("Receiving: ");
-    Serial.println(incoming);
-    digitalWrite(LED_PIN, HIGH);
+    Serial.println(c);
+    storeValue(c);
     return true;
   } else {
-    digitalWrite(LED_PIN, LOW);
     return false;
   }
+}
+
+void storeValue(char c){
+  if(valuesStored < 6 && c >= 97 && c <= 108){
+    if(values[(c - 97) / 2] == -1) {
+      values[(c - 97) / 2] = (c + 1) % 2;
+      valuesStored++;
+      printValues();
+      Serial.print("sum = ");
+      Serial.println(getSum());
+    }
+  }
+}
+
+void printValues(){
+  Serial.print("[");
+  for(int i = 0; i < 6; i++){
+    Serial.print(values[i]);
+    Serial.print(",");
+  }
+  Serial.println();
+}
+
+int getSum(){
+  int val = 0;
+  for(int i = 0; i < 6; i++){
+    val += values[i];
+  }
+  return val;
 }
 
 bool doMagnetSense(){
