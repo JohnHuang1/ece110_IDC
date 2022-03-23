@@ -34,7 +34,7 @@ void loop() {
     Serial.println(incoming);
     digitalWrite(LED_PIN, HIGH);
   } else {
-    delay(100);
+    delay(500);
     digitalWrite(LED_PIN, LOW);
   }
 
