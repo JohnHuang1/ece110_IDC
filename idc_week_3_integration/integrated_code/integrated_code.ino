@@ -343,7 +343,7 @@ bool followLine(){
 // Get maximum value of array
 int getMaxIndexOfArr(int arrLength, int arr[]){
   int maxIndex = 0;
-  for(int i = 0; i < arrLength); i++){
+  for(int i = 0; i < arrLength; i++){
     if(arr[i] > arr[maxIndex]){
       maxIndex = i;
     }
