@@ -1,8 +1,8 @@
-//# include <Servo_Hardware_PWM.h>
-# include <Servo.h>
+//#include <Servo_Hardware_PWM.h>
+#include <Servo.h>
 #include <Wire.h>
 #include "Adafruit_TCS34725.h"
-#define hall_sensor 2
+//#define hall_sensor 2
 #define Rx 17
 #define Tx 16
 #include <SoftwareSerial.h>
@@ -141,7 +141,7 @@ void loop() {
       continentIndex = getMaxIndexOfArr(6, RGBReads); // store RGB readings output by getting largest value of RGB readings array
 
       //TODO Display Continent name via continentIndex;
-      LCD(continentNames[continentIndex] + " | " + magChar, "Challenge TBD");
+      LCD(continentNames[continentIndex] + "--" + magChar, "Challenge TBD");
 
       Serial.print("magChar = ");
       Serial.print((char) magChar);
@@ -467,16 +467,16 @@ void LCD(String topLine, String bottomLine) {
   while(1){
       
     delay(100);
-    mySerial.write(12);
-    mySerial.write(17);
+    mySerial.write(12); // Clear
+    mySerial.write(17); // Turn backlight on
     delay(5);
     mySerial.print(topLine);
-    mySerial.write(13);
+    mySerial.write(13); // Starts a new line
     mySerial.print(bottomLine);
-    mySerial.write(212);
-    mySerial.write(220);
+    mySerial.write(212); // Sets up next sound for quarter-length note (about 1/2 second)
+    mySerial.write(220); // Sounds an A tone (440 Hertz)
     delay(3000);
-    mySerial.write(18);
+//    mySerial.write(18); // Turn backlight off
 //    break;
   }
 }

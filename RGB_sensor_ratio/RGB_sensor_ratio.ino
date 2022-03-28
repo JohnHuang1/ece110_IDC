@@ -80,7 +80,7 @@ void loop() {
   // red = 1.0000000000, 0.2409638643, 0.2022375106, 
   // blue = 0.6489184379, 0.7653909683, 1.0000000000,  
   // green = 0.7093023300, 1.0000000000, 0.4111295700,
-    String aontinentNames = {
+    String aontinentNames[] = {
     "South America", // Gray 0 
     "North America", // Green 1 
     "Africa", // Yellow 2 
