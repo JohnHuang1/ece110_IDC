@@ -1,8 +1,6 @@
-//#include <Servo_Hardware_PWM.h>
 #include <Servo.h>
 #include <Wire.h>
 #include "Adafruit_TCS34725.h"
-//#define hall_sensor 2
 #define Rx 17
 #define Tx 16
 #include <SoftwareSerial.h>
@@ -23,7 +21,7 @@ const int blue_light_pin= 44;
 const int red_light_pin = 45;
 const int green_light_pin = 46;
 
-/* Initialise with default values (int time = 2.4ms, gain = 1x) */
+/* Initialise color sensor with default values (int time = 2.4ms, gain = 1x) */
 Adafruit_TCS34725 tcs = Adafruit_TCS34725(TCS34725_INTEGRATIONTIME_614MS, TCS34725_GAIN_1X);
 
 bool finishedLineFollow = false; // Keep track of if Line follow is finished
@@ -34,6 +32,7 @@ int teamSum = -1; // Team sum integer stored
 // index 0 = noMag | index 1 = mag present
 int magReads[2] = {0,0};
 int magChar = 'z'; // z  = default no read, 
+int mIndex = -1;
 int sensorReadAttempts = 0;
 
 // index corresponds to continent in continentNames array
@@ -47,6 +46,10 @@ String continentNames[6] = {
   "Australia" //Purple
   };
 int continentIndex = -1;
+
+//Scroll bottom line
+int pos = -1;
+String lcdBottom = "";
   
 int valuesStored = 0;
 String challenges[] = {"Manage the Nitrogen Cycle", 
@@ -60,6 +63,10 @@ String challenges[] = {"Manage the Nitrogen Cycle",
 void setup() {
 //  tone(4, 3000, 3000);
 //  delay(1000);
+
+  // LCD DataPin
+  pinMode(TxPin, OUTPUT);
+  digitalWrite(TxPin, HIGH);
 
   Serial.begin(9600); // Debug Serial
   Serial2.begin(9600); // xBee Serial
@@ -76,9 +83,9 @@ void setup() {
   // Hall-effect Pin
   pinMode(A2, INPUT);
 
-  // LCD DataPin
-  pinMode(TxPin, OUTPUT);
-  digitalWrite(TxPin, HIGH);
+  mySerial.write(12);
+  mySerial.write(18);
+  delay(100);
 
   // Init Color Sensor
   while(1){
@@ -94,22 +101,38 @@ void setup() {
 }
 
 void loop() {
+
+//  if(lcdBottom.equals("")){
+//    lcdBottom = "Engineer the Tools of Scientific Discovery";
+//  }
+////  LCD("North America--e");
+////  Serial.print("loop");
+////  while(1);
+//
+//  while(1){
+//    Serial.print("loop");
+//    LCD("North America--e");
+//    delay(1000);
+//  }
   
   // Line Following loop, Escapes when all-black case is hit
   if(!finishedLineFollow){
     Serial.print("Line Following... ");
     RGB_color(0,0,0);
     while(!followLine()){
-//      Serial.print(".");
       delay(1);
     }
     finishedLineFollow = true;
     Serial.println("Now Finished");
   }
 
+  servoLeft.detach(); // Servo Left output
+  servoRight.detach(); // Servo Right output
+
+
   checkReceive(); // Reads data from xBee and stores value if appropriate
 
-  int attempts = 20; // Number of Sensor attempts to do
+  int attempts = 3; // Number of Sensor attempts to do
   if(sensorReadAttempts < attempts){
 
     magReads[doMagnetSense()] += 1; // Adds magnet reading to appropriate index of array
@@ -123,13 +146,18 @@ void loop() {
     
     // Case for after last read attempt is reached
     if(sensorReadAttempts == attempts){
+
+      delay(100);
+      mySerial.write(12);
+      mySerial.write(17);
+      delay(100);
       
       Serial.print("magReads = ");
       printIntArray(2, magReads);
       Serial.print("RGBReads = ");
       printIntArray(6, RGBReads);
       
-      int mIndex = getMaxIndexOfArr(2, magReads); // Get highest value of magnet readings array
+      mIndex = getMaxIndexOfArr(2, magReads); // Get highest value of magnet readings array
       // Assign correct char to magChar
       if(mIndex) {
         magChar = 'f';
@@ -141,26 +169,34 @@ void loop() {
       continentIndex = getMaxIndexOfArr(6, RGBReads); // store RGB readings output by getting largest value of RGB readings array
 
       //TODO Display Continent name via continentIndex;
-      LCD(continentNames[continentIndex] + "--" + magChar, "Challenge TBD");
+      LCD(continentNames[continentIndex] + "--" + mIndex);
 
       Serial.print("magChar = ");
       Serial.print((char) magChar);
       Serial.print(" | Continent = ");
       Serial.println(continentNames[continentIndex]);
+//      teamSum = 6;
+//      valuesStored = 6;
     }
     Serial.print("Sensor Read Attempt: ");
     Serial.println(sensorReadAttempts);
   } else {
-//    sendMessage(magChar); // Spam own task value
-
+    sendMessage(magChar); // Spam own task value
+    delay(100);
   }
 
   // Case for all challenge values stored
   if(valuesStored == 6) {
     Serial.println(challenges[getSum()]);
-    LCD(continentNames[continentIndex]  + " | " + magChar, challenges[getSum()] + " | " + getSum()); // Write final output to LCD
+    if(lcdBottom.equals("")){
+      lcdBottom = challenges[getSum()] + " | " + getSum();
+    }
+    Serial.print("loop");
     valuesStored++; // increment values stored so LCD isn't constantly updated
+  } else if(valuesStored > 6) {
+    LCD(continentNames[continentIndex] + "--" + mIndex);
   }
+//  Serial.print("loop");
   delay(100);
   
 }
@@ -278,8 +314,8 @@ int getSum(){
 bool doMagnetSense(){
   int val = analogRead(A2);
   int threshold = 20;
-  int noMag = 522;
-//  Serial.println(val);
+  int noMag = 343;
+  Serial.println(val);
   if(val < noMag - threshold || val > noMag + threshold){
     Serial.println("Magnet Detected");
     return true;
@@ -314,29 +350,34 @@ bool followLine(){
 
   // All-black / Hash case
   if(middle && left && right) {
+    Serial.println("HASH REACHED");
     stopMoving(1000);
     return true;
   }
 
   // Line centered
   if(middle && !left && !right){
+    Serial.println("FORWARD REACHED");
     goForward(time);
     return false;
   }
 
   // On left of line
   if(!left && right){
+    Serial.println("GORIGHT REACHED");
     goRight(time);
     return false;
   }
 
   // On Right of Line
   if(left && !right){
+    Serial.println("GOLEFT REACHED");
     goLeft(time);
     return false;
   }
 
   // no case reached
+  Serial.println("NOCASE REACHED");
   return false;
 }
 
@@ -463,20 +504,29 @@ void RGB_color(int red_light, int green_light, int blue_light) {
 }
 
 // Set LCD to write 2 strings on the top and bottom
-void LCD(String topLine, String bottomLine) {
-  while(1){
-      
-    delay(100);
-    mySerial.write(12); // Clear
-    mySerial.write(17); // Turn backlight on
-    delay(5);
-    mySerial.print(topLine);
-    mySerial.write(13); // Starts a new line
-    mySerial.print(bottomLine);
-    mySerial.write(212); // Sets up next sound for quarter-length note (about 1/2 second)
-    mySerial.write(220); // Sounds an A tone (440 Hertz)
-    delay(3000);
-//    mySerial.write(18); // Turn backlight off
-//    break;
+void LCD(String topString) {
+  Serial.println("LCD Called");
+  mySerial.write(12);   
+  delay(5);
+  mySerial.write(128); //move to pos 0,0
+  mySerial.print(topString);
+  mySerial.write(148); // move to pos 1,0
+  mySerial.print(getLCDBottomString());
+  if(pos == 0){
+    delay(500);
   }
+  delay(100);
+}
+//Helper method to scroll bottom line
+String getLCDBottomString(){
+  if(lcdBottom.length() < 16) return lcdBottom;
+  pos ++;
+  if(pos > lcdBottom.length() - 14) {
+    pos = 0;
+  }
+  int endpos = pos + 16;
+  if(endpos > lcdBottom.length()){
+    endpos = lcdBottom.length();
+  }
+  return lcdBottom.substring(pos, endpos);
 }
