@@ -49,6 +49,7 @@ int continentIndex = -1;
 
 //Scroll bottom line
 int pos = -1;
+String lcdTop = "";
 String lcdBottom = "";
   
 int valuesStored = 0;
@@ -59,6 +60,7 @@ String challenges[] = {"Manage the Nitrogen Cycle",
                       "Engineer the Tools of Scientific Discovery",
                       "Reverse-Engineer the Brain",
                       "Advance Personalized Learning"};
+long timestamp = 0;
 
 void setup() {
 //  tone(4, 3000, 3000);
@@ -101,23 +103,13 @@ void setup() {
 }
 
 void loop() {
-
-//  if(lcdBottom.equals("")){
-//    lcdBottom = "Engineer the Tools of Scientific Discovery";
-//  }
-////  LCD("North America--e");
-////  Serial.print("loop");
-////  while(1);
-//
-//  while(1){
-//    Serial.print("loop");
-//    LCD("North America--e");
-//    delay(1000);
-//  }
   
   // Line Following loop, Escapes when all-black case is hit
   if(!finishedLineFollow){
-    Serial.print("Line Following... ");
+    Serial.print("Line Following");
+    mySerial.write(12);
+    lcdTop = "Line Following";
+    LCD();
     RGB_color(0,0,0);
     while(!followLine()){
       delay(1);
@@ -130,10 +122,15 @@ void loop() {
   servoRight.detach(); // Servo Right output
 
 
-  checkReceive(); // Reads data from xBee and stores value if appropriate
+  if(valuesStored < 6){
+    checkReceive(); // Reads data from xBee and stores value if appropriate
+  }
 
-  int attempts = 3; // Number of Sensor attempts to do
+  int attempts = 10; // Number of Sensor attempts to do
   if(sensorReadAttempts < attempts){
+
+    lcdTop = "Attempt # " + String(sensorReadAttempts);
+    LCD();
 
     magReads[doMagnetSense()] += 1; // Adds magnet reading to appropriate index of array
 
@@ -169,7 +166,8 @@ void loop() {
       continentIndex = getMaxIndexOfArr(6, RGBReads); // store RGB readings output by getting largest value of RGB readings array
 
       //TODO Display Continent name via continentIndex;
-      LCD(continentNames[continentIndex] + "--" + mIndex);
+      lcdTop = continentNames[continentIndex] + "--" + mIndex;
+      LCD();
 
       Serial.print("magChar = ");
       Serial.print((char) magChar);
@@ -181,20 +179,23 @@ void loop() {
     Serial.print("Sensor Read Attempt: ");
     Serial.println(sensorReadAttempts);
   } else {
-    sendMessage(magChar); // Spam own task value
-    delay(100);
+    if(millis() - timestamp > 3000){
+      sendMessage(magChar);
+      timestamp = millis();
+    }
+//    sendMessage(magChar);
+//    delay(100);
   }
 
   // Case for all challenge values stored
   if(valuesStored == 6) {
     Serial.println(challenges[getSum()]);
-    if(lcdBottom.equals("")){
-      lcdBottom = challenges[getSum()] + " | " + getSum();
-    }
+    lcdBottom = challenges[getSum()] + " | " + getSum() + " | " + lcdBottom;
     Serial.print("loop");
     valuesStored++; // increment values stored so LCD isn't constantly updated
   } else if(valuesStored > 6) {
-    LCD(continentNames[continentIndex] + "--" + mIndex);
+    lcdTop = continentNames[continentIndex] + "--" + mIndex;
+    LCD();
   }
 //  Serial.print("loop");
   delay(100);
@@ -265,7 +266,7 @@ bool checkReceive(){
   if(Serial2.available()){
     char c = Serial2.read();
     Serial.print("Receiving: ");
-    Serial.println(c);
+    Serial.println(c + String(int(c)));
     storeValue(c); // Store value from xBee
     return true;
   } else {
@@ -275,10 +276,15 @@ bool checkReceive(){
 
 //Store value to values Array
 void storeValue(char c){
+  Serial.println("StoreValue Called");
   if(valuesStored < 6 && c >= 97 && c <= 108){ // Check if input is valid
     if(values[(c - 97) / 2] == -1) {
       values[(c - 97) / 2] = (c + 1) % 2;
       valuesStored++;
+
+      Serial.println("lcdBottom +=" + String(c));
+      lcdBottom += String(c) + " ";
+      LCD();
       
       printIntArray(6, values);
       Serial.print("sum = ");
@@ -297,6 +303,16 @@ void printIntArray(int arrLength, int arr[]){
   Serial.println("]");
 }
 
+void printFloatArray(int arrLength, float arr[]){
+  Serial.print("[");
+  for(int i = 0; i < arrLength; i++){
+    Serial.print((float) arr[i]);
+    Serial.print(",");
+  }
+  Serial.println("]");
+}
+
+
 // fetch sum of challenge values stored
 int getSum(){
   if(teamSum == -1 && valuesStored >= 6){
@@ -313,8 +329,8 @@ int getSum(){
 // Get reading of magnet. Output to true or false
 bool doMagnetSense(){
   int val = analogRead(A2);
-  int threshold = 20;
-  int noMag = 343;
+  int threshold = 30;
+  int noMag = 522;
   Serial.println(val);
   if(val < noMag - threshold || val > noMag + threshold){
     Serial.println("Magnet Detected");
@@ -400,12 +416,15 @@ int doRGBStuff(){
   int red = (int) r;
   int green = (int) g;
   int blue = (int) b;
+  
 
   // Scale RGB values to ratios of the highest RGB value
   int rgbArr[3] = {red, green, blue};
   int greatestIndex = getGreatest(rgbArr);
   float ratios[3] = {};
   getRatios(rgbArr, greatestIndex, ratios);
+//  float ratios[3] = {0.81, 1.0, 0.51};
+  printFloatArray(3, ratios);  
 
   //gray
   float grayTarget[3] = {1.0, 0.99, 0.78};
@@ -416,7 +435,7 @@ int doRGBStuff(){
   }
 
     //green
-  float greenTarget[3] = {0.71, 1.0, .41};
+  float greenTarget[3] = {0.71, 1.0, 0.41};
   if(compareRatios(ratios, greenTarget)){
     Serial.println("GREEN detected");
     RGB_color(0, 255, 0);
@@ -489,8 +508,12 @@ void getRatios(int input[3], int greatestIndex, float ratioArr[3]){
 // Check if data float values are in threshold of target values
 boolean compareRatios(float data[3], float target[3]){
   float threshold = 0.2;
+  Serial.println("Compare ratios");
   for(int i = 0; i < 3; i++){
-    if(data[i] < target[i] - threshold && data[i] > target[i] + threshold) return false;
+//    Serial.print(String(i) + " | data = " + String(data[i]) + " |  lowerBound = " + String(target[i] - threshold) + " | upperBound = " + String(target[i] + threshold));
+    boolean val = data[i] < target[i] - threshold || data[i] > target[i] + threshold;
+//    Serial.println( " | val = " + String(val));
+    if(val) return false;
   }
   return true;
 }
@@ -504,15 +527,15 @@ void RGB_color(int red_light, int green_light, int blue_light) {
 }
 
 // Set LCD to write 2 strings on the top and bottom
-void LCD(String topString) {
+void LCD() {
   Serial.println("LCD Called");
   mySerial.write(12);   
   delay(5);
   mySerial.write(128); //move to pos 0,0
-  mySerial.print(topString);
+  mySerial.print(lcdTop);
   mySerial.write(148); // move to pos 1,0
   mySerial.print(getLCDBottomString());
-  if(pos == 0){
+  if(pos == 0 || pos > lcdBottom.length() - 13){
     delay(500);
   }
   delay(100);
