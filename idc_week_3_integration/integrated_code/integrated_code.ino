@@ -5,6 +5,7 @@
 #define Tx 16
 #include <SoftwareSerial.h>
 
+// Initialize serial that outputs to LCD
 const int TxPin = 6;
 SoftwareSerial mySerial = SoftwareSerial(255, TxPin);
 
@@ -45,7 +46,7 @@ String continentNames[6] = {
   "Asia", // Red
   "Australia" //Purple
   };
-int continentIndex = -1;
+int continentIndex = -1; // Index corresponding to final value in ContinentNames
 
 //Scroll bottom line
 int pos = -1;
@@ -60,7 +61,9 @@ String challenges[] = {"Manage the Nitrogen Cycle",
                       "Engineer the Tools of Scientific Discovery",
                       "Reverse-Engineer the Brain",
                       "Advance Personalized Learning"};
-long timestamp = 0;
+long sendMsgTimeStamp = 0;
+long fillArrTimeStamp = 0;
+long lcdTimeStamp = 0;
 
 void setup() {
 //  tone(4, 3000, 3000);
@@ -74,9 +77,6 @@ void setup() {
   Serial2.begin(9600); // xBee Serial
   mySerial.begin(9600); // LCD Screen
 
-  servoLeft.attach(12); // Servo Left output
-  servoRight.attach(11); // Servo Right output
-
   //LED Pins
   pinMode(red_light_pin, OUTPUT);
   pinMode(green_light_pin, OUTPUT);
@@ -85,9 +85,13 @@ void setup() {
   // Hall-effect Pin
   pinMode(A2, INPUT);
 
-  mySerial.write(12);
-  mySerial.write(18);
+  randomSeed(analogRead(0)); // set seed for random number generator to random value from unconnected pin 0
+
+  mySerial.write(12); // Clear LCD
+  mySerial.write(18); // Turn-off backlight of LCD
   delay(100);
+
+  lcdTimeStamp = millis();
 
   // Init Color Sensor
   while(1){
@@ -107,9 +111,23 @@ void loop() {
   // Line Following loop, Escapes when all-black case is hit
   if(!finishedLineFollow){
     Serial.print("Line Following");
+
+    // Turn on backlight and clear CLD
+    mySerial.write(17);
     mySerial.write(12);
+    delay(10);
+
+    // Display Line Following to LCD
     lcdTop = "Line Following";
     LCD();
+    delay(100);
+
+    servoLeft.attach(12); // Servo Left output
+    servoRight.attach(11); // Servo Right output
+
+    delay(100);
+ 
+    
     RGB_color(0,0,0);
     while(!followLine()){
       delay(1);
@@ -126,11 +144,11 @@ void loop() {
     checkReceive(); // Reads data from xBee and stores value if appropriate
   }
 
-  int attempts = 10; // Number of Sensor attempts to do
+  int attempts = 3; // Number of Sensor attempts to do
   if(sensorReadAttempts < attempts){
 
-    lcdTop = "Attempt # " + String(sensorReadAttempts);
-    LCD();
+    lcdTop = "Attempt # " + String(sensorReadAttempts); // Display Attempt number
+    LCD(); // update LCD
 
     magReads[doMagnetSense()] += 1; // Adds magnet reading to appropriate index of array
 
@@ -146,9 +164,11 @@ void loop() {
 
       delay(100);
       mySerial.write(12);
+      delay(5);
       mySerial.write(17);
       delay(100);
-      
+
+      //Debug magnet and RGB reads
       Serial.print("magReads = ");
       printIntArray(2, magReads);
       Serial.print("RGBReads = ");
@@ -169,6 +189,8 @@ void loop() {
       lcdTop = continentNames[continentIndex] + "--" + mIndex;
       LCD();
 
+      fillArrTimeStamp = millis();
+
       Serial.print("magChar = ");
       Serial.print((char) magChar);
       Serial.print(" | Continent = ");
@@ -179,19 +201,39 @@ void loop() {
     Serial.print("Sensor Read Attempt: ");
     Serial.println(sensorReadAttempts);
   } else {
-    if(millis() - timestamp > 3000){
+    if(millis() - sendMsgTimeStamp > 3000){
       sendMessage(magChar);
-      timestamp = millis();
+      sendMsgTimeStamp = millis();
     }
-//    sendMessage(magChar);
-//    delay(100);
+
+    if(valuesStored < 6){
+      // Check if timeleft until fill values array is less than set value
+      long timeLeft = millis() - fillArrTimeStamp;
+      if(timeLeft > 120000){
+        //replace -1 entries in values array to random 0 or 1
+        valuesStored = 6;
+        String newValues = "| rand: ";
+        for(int i = 0; i < 6; i++){
+          if(values[i] == -1){
+            values[i] = random(2);
+          }
+          newValues += String(values[i]) + " ";
+        }
+        lcdBottom += newValues;
+      } else {
+        // update time until fill values array on lcd
+        String temp = lcdBottom;
+        lcdBottom = String((int) (timeLeft / 1000)) + " " + lcdBottom;
+        LCD();
+        lcdBottom = temp;
+      }
+    }
   }
 
   // Case for all challenge values stored
   if(valuesStored == 6) {
     Serial.println(challenges[getSum()]);
     lcdBottom = challenges[getSum()] + " | " + getSum() + " | " + lcdBottom;
-    Serial.print("loop");
     valuesStored++; // increment values stored so LCD isn't constantly updated
   } else if(valuesStored > 6) {
     lcdTop = continentNames[continentIndex] + "--" + mIndex;
@@ -263,10 +305,11 @@ void sendMessage(char c){
 
 // Read message from xBee
 bool checkReceive(){
+  Serial.println("CheckReceive called");
   if(Serial2.available()){
     char c = Serial2.read();
-    Serial.print("Receiving: ");
-    Serial.println(c + String(int(c)));
+//    Serial.print("Receiving: ");
+//    Serial.println(c + String(int(c)));
     storeValue(c); // Store value from xBee
     return true;
   } else {
@@ -276,7 +319,7 @@ bool checkReceive(){
 
 //Store value to values Array
 void storeValue(char c){
-  Serial.println("StoreValue Called");
+//  Serial.println("StoreValue Called");
   if(valuesStored < 6 && c >= 97 && c <= 108){ // Check if input is valid
     if(values[(c - 97) / 2] == -1) {
       values[(c - 97) / 2] = (c + 1) % 2;
@@ -528,17 +571,24 @@ void RGB_color(int red_light, int green_light, int blue_light) {
 
 // Set LCD to write 2 strings on the top and bottom
 void LCD() {
-  Serial.println("LCD Called");
-  mySerial.write(12);   
-  delay(5);
-  mySerial.write(128); //move to pos 0,0
-  mySerial.print(lcdTop);
-  mySerial.write(148); // move to pos 1,0
-  mySerial.print(getLCDBottomString());
+  int delayTime = 100;
   if(pos == 0 || pos > lcdBottom.length() - 13){
-    delay(500);
+    delayTime = 500;
   }
-  delay(100);
+  if(millis() - lcdTimeStamp > delayTime){
+    Serial.println("LCD Called");
+    mySerial.write(12);   
+    delay(5);
+    mySerial.write(128); //move to pos 0,0
+    mySerial.print(lcdTop);
+    mySerial.write(148); // move to pos 1,0
+    mySerial.print(getLCDBottomString());
+    lcdTimeStamp = millis();
+  }
+//  if(pos == 0 || pos > lcdBottom.length() - 13){
+//    delay(500);
+//  }
+//  delay(100);
 }
 //Helper method to scroll bottom line
 String getLCDBottomString(){
